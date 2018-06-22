@@ -3,7 +3,7 @@
 //--------------------------------------------------------------
 void ofApp::setup(){
     
-    ofSetLogLevel(OF_LOG_VERBOSE);
+    //ofSetLogLevel(OF_LOG_VERBOSE);
     
     // Assets
     dfvLogo.load("den frie vilje logo white.png");
@@ -11,9 +11,47 @@ void ofApp::setup(){
     // Fonts
     //TODO: fix naming based on folders
     ofTrueTypeFont::setGlobalDpi(72);
-    guiFont.load("fonts/Rene Bieder - Campton Book.otf", 12, true, true);
-    titleFont.load("fonts/Rene Bieder - Campton Book.otf", 100, true, true, true, 0.1);
-    labelsFont.load("fonts/Rene Bieder - Campton Book.otf", 100, true, true, true, 0.1);
+    
+    string guiFontPath = "fonts/defaults/gui.otf";
+    int guiFontSize = 10;
+    
+    guiFont.load(guiFontPath, guiFontSize, true, true);
+    titleFont.load("fonts/defaults/title.otf", 100, true, true, true, 0.1);
+    labelsFont.load("fonts/defaults/labels.otf", 100, true, true, true, 0.1);
+    leaderFont.load("fonts/defaults/leader.otf", 100, true, true, true, 0.1);
+
+    ofDirectory fontsDir;
+    
+    if(ofFile::doesFileExist("fonts/")){
+        fontsDir.listDir("fonts/");
+        fontsDir.sort(); // in linux the file system doesn't return file lists ordered in alphabetical order
+        
+        // you can now iterate through the files and load them into the ofImage vector
+        for(auto file : fontsDir.getFiles()){
+            ofDirectory fileDir;
+            if(file.isDirectory()){
+                fileDir.listDir(file.path());
+                fileDir.allowExt("otf");
+                fileDir.allowExt("ttf");
+                fileDir.sort();
+                if(fileDir.size() > 0){
+                    if(file.getBaseName() == "gui"){
+                        guiFontPath = fileDir.getFile(0).path();
+                        guiFont.load(fileDir.getFile(0).path(), guiFontSize, true, true);
+                    }
+                    if(file.getBaseName() == "title"){
+                        titleFont.load(fileDir.getFile(0).path(), 100, true, true, true, 0.1);
+                    }
+                    if(file.getBaseName() == "lables"){
+                        labelsFont.load(fileDir.getFile(0).path(), 100, true, true, true, 0.1);
+                    }
+                    if(file.getBaseName() == "leader"){
+                        leaderFont.load(fileDir.getFile(0).path(), 100, true, true, true, 0.1);
+                    }
+                }
+            }
+        }
+    }
 
     // Parameters
     
@@ -36,13 +74,31 @@ void ofApp::setup(){
     
     graphTitle.setName("title");
     graphTitle.add(graphTitleFade.set("fade", 1.0,0.0,1.0));
-    graphTitle.add(graphTitleText.set("text", "Untitled"));
+    graphTitle.add(graphTitleText.set("text", "Title"));
     graphTitle.add(graphTitleSize.set("size",100,0,500));
     graphTitle.add(graphTitleColor.set("color",
                                        ofFloatColor(1.0),
                                        ofFloatColor(0.0),
                                        ofFloatColor(1.0)));
+    graphTitle.add(graphTitlePosition.set("position",
+                                          glm::vec2(0.0,0.0),
+                                          glm::vec2(-1.0,-1.0),
+                                          glm::vec2(1.0,1.0)));
     graphParameters.add(graphTitle);
+    
+    graphLeader.setName("leader");
+    graphLeader.add(graphLeaderFade.set("fade", 1.0,0.0,1.0));
+    graphLeader.add(graphLeaderText.set("text", "Leader"));
+    graphLeader.add(graphLeaderSize.set("size",40,0,500));
+    graphLeader.add(graphLeaderColor.set("color",
+                                       ofFloatColor(1.0),
+                                       ofFloatColor(0.0),
+                                       ofFloatColor(1.0)));
+    graphLeader.add(graphLeaderPosition.set("position",
+                                          glm::vec2(-1.0,-1.0),
+                                          glm::vec2(-1.0,-1.0),
+                                          glm::vec2(1.0,1.0)));
+    graphParameters.add(graphLeader);
     
     graphLabels.setName("labels");
     graphLabels.add(graphLabelsColor.set("color",
@@ -132,19 +188,25 @@ void ofApp::setup(){
     
     // GUI General setup
     ofxGuiSetDefaultWidth(guiWidth);
-    ofxGuiSetTextPadding(8);
-    ofxGuiSetDefaultHeight(24);
+    ofxGuiSetTextPadding(4);
+    ofxGuiSetDefaultHeight(16);
     ofxGuiSetBorderColor(ofColor(64,255));
     ofxGuiSetHeaderColor(ofColor(64,255));
-    ofxGuiSetFont("fonts/Rene Bieder - Campton Book.otf", 12);
+    ofxGuiSetFont(guiFontPath, guiFontSize);
 
-    gui.setup(graphParameters);
+    guiParameters.add(guiSaveToQlab.set("save to qlab", false));
+    guiParameters.add(graphParameters);
+    
+    gui.setup(guiParameters);
+    gui.getGroup("graph").maximize();
+    gui.getGroup("graph").minimizeAll();
+    
 
     // Window
     ofSetWindowTitle("Osc Syphon Graph");
     
     // Osc
-    oscSync.setup((ofParameterGroup&)gui.getParameter(),6666,"localhost",6667);
+    oscSync.setup((ofParameterGroup&)gui.getParameter().castGroup().get("graph"),6666,"localhost",6667);
 
     // Syphon
     grahpSyphonServer.setName("Graph Output");
@@ -162,13 +224,13 @@ void ofApp::update(){
     
     oscSync.update();
     qLab.update();
-    if(saveToQlab){
-        qLab.newGroupWithOscCuesFromParameterGroup(graphParameters);
-        saveToQlab = false;
+    if(guiSaveToQlab.get()){
+        qLab.newGroupWithOscCuesFromParameterGroup((ofParameterGroup&)gui.getParameter().castGroup().get("graph"));
+        guiSaveToQlab.set(false);
     }
     
-    if(graphFbo.getWidth() != graphBackgroundWidth.get()
-       || graphFbo.getHeight() != graphBackgroundHeight.get()){
+    if(graphFbo.getWidth() != graphBackgroundWidth.get() ||
+       graphFbo.getHeight() != graphBackgroundHeight.get()){
         // dimensions were changed and fbo must be reinitialised.
         graphFbo.allocate(graphBackgroundWidth.get(), graphBackgroundHeight.get(), GL_RGBA, 16);
         // with alpha, 8 bits red, 8 bits green, 8 bits blue, 8 bits alpha, from 0 to 255 in 256 steps
@@ -207,11 +269,12 @@ void ofApp::draw(){
 
         if(graphSetup.get()){
             // margins
-            ofNoFill();
-            ofSetColor(255, 255, 0);
-            ofDrawRectangle(viewPortMinusMargins);
             ofSetColor(255,255,0, 64);
             ofFill();
+            ofDrawRectangle(viewPortMinusMargins);
+            ofNoFill();
+            ofSetLineWidth(2.0);
+            ofSetColor(255, 255, 0);
             ofDrawRectangle(viewPortMinusMargins);
 
             // test
@@ -219,9 +282,7 @@ void ofApp::draw(){
             ofDrawEllipse(width/2, graphBackgroundHeight.get()/2, width*0.2*sin(ofGetElapsedTimef()), width*0.2*sin(ofGetElapsedTimef()));
         }
         
-        //TODO: subtitles
-        
-        //TODO: bars
+        // bars
         
         glm::vec2 barMargins = graphBarsMargins.get();
         barMargins *= width;
@@ -237,6 +298,15 @@ void ofApp::draw(){
             valueRect.scaleHeight((graphBarsBarsValue[i].get()/100.0));
             
             ofPushStyle();
+            if(graphSetup.get()){
+                ofFill();
+                ofSetColor(255,0,255,64);
+                ofDrawRectangle(barRect);
+                ofNoFill();
+                ofSetLineWidth(2.0);
+                ofSetColor(255,0,255);
+                ofDrawRectangle(barRect);
+            }
             ofFill();
             ofFloatColor barColor(graphBarsColor.get());
             barColor.a = graphBarsBarsFade[i].get();
@@ -258,7 +328,8 @@ void ofApp::draw(){
                              labelsFont,
                              graphBarsNumberSize.get(),
                              barRect.getCenter().x + (graphBarsNumberPosition.get().x*barRect.getWidth()*0.5),
-                            barRect.getBottom() + graphBarsNumberPosition.get().y*barRect.getWidth()*0.5);
+                            barRect.getBottom() + graphBarsNumberPosition.get().y*barRect.getWidth()*0.5,
+                             graphBarsNumberPosition.get().x);
 
             ofFloatColor percentColor(graphBarsPercentColor.get());
             percentColor.a = graphBarsPercentFade.get() * graphBarsBarsFade[i].get();
@@ -268,7 +339,8 @@ void ofApp::draw(){
                              labelsFont,
                              graphBarsPercentSize.get(),
                              barRect.getCenter().x + (graphBarsPercentPosition.get().x*barRect.getWidth()*0.5),
-                             (graphBarsStrokeFullHeight.get()?barRect:valueRect).getTop() + graphBarsPercentPosition.get().y*barRect.getWidth()*0.5);
+                             (graphBarsStrokeFullHeight.get()?barRect:valueRect).getTop() + graphBarsPercentPosition.get().y*barRect.getWidth()*0.5,
+                             graphBarsPercentPosition.get().x);
 
             ofPopStyle();
             
@@ -296,7 +368,15 @@ void ofApp::draw(){
         ofFloatColor titleColor(graphTitleColor.get());
         titleColor.a = graphTitleFade.get();
         ofSetColor(titleColor);
-        drawStringAtSize(graphTitleText.get(), titleFont, graphTitleSize.get(), viewPortMinusMargins.getCenter().x, viewPortMinusMargins.getCenter().y);
+        drawStringAtSize(graphTitleText.get(), titleFont, graphTitleSize.get(), viewPortMinusMargins.getCenter().x + (graphTitlePosition.get().x * viewPortMinusMargins.getWidth() * 0.5), viewPortMinusMargins.getCenter().y  + (graphTitlePosition.get().y * viewPortMinusMargins.getHeight() * 0.5), graphTitlePosition.get().x, graphTitlePosition.get().y);
+
+        // leader
+        ofFill();
+        ofFloatColor leaderColor(graphLeaderColor.get());
+        leaderColor.a = graphLeaderFade.get();
+        ofSetColor(leaderColor);
+        drawStringAtSize(graphLeaderText.get(), leaderFont, graphLeaderSize.get(), viewPortMinusMargins.getCenter().x + (graphLeaderPosition.get().x * viewPortMinusMargins.getWidth() * 0.5), viewPortMinusMargins.getCenter().y  + (graphLeaderPosition.get().y * viewPortMinusMargins.getHeight() * 0.5), graphLeaderPosition.get().x, graphLeaderPosition.get().y);
+        
 
         // master fader
         ofFill();
@@ -359,10 +439,20 @@ void ofApp::draw(){
     
 }
 
-void ofApp::drawStringAtSize(string str, ofTrueTypeFont &font, float size, float x, float y, int hAlign, int vAlign){
+void ofApp::drawStringAtSize(string str, ofTrueTypeFont &font, float size, float x, float y, float hAlign, float vAlign){
     
-    float titleTextWidth = titleFont.stringWidth(str);
-    float mHeight = titleFont.stringHeight("m");
+    auto lines = ofSplitString(str, "\n");
+    string mStr = "";
+    for(int i = 0; i < lines.size(); i++){
+        mStr += "M";
+        if(i+1 < lines.size()){
+            mStr+="\n";
+        }
+    }
+    float mHeight = titleFont.stringHeight("M");
+    float mLinesHeight = titleFont.stringHeight(mStr);
+    
+    mLinesHeight = ((lines.size()-1)*(mLinesHeight/lines.size()))+mHeight;
     
     float scale = size / font.getSize();
     
@@ -371,9 +461,18 @@ void ofApp::drawStringAtSize(string str, ofTrueTypeFont &font, float size, float
     ofPushMatrix();
     ofScale(scale, scale);
     
-    ofTranslate(titleTextWidth*(-hAlign-1.0)/2.0, mHeight*(vAlign+1.0)/2.0);
-
-    font.drawStringAsShapes(str, 0, 0);
+    int line = 1;
+    float lineHeight = mLinesHeight/lines.size();
+    
+    for(auto l : lines){
+        ofPushMatrix();
+        float lineWidth = titleFont.stringWidth(l);
+        ofTranslate(lineWidth*(-hAlign-1.0)/2.0, ((lineHeight*line*(-vAlign+1.0))/2.0)-((lines.size()-line)*lineHeight*ofMap(vAlign, -1.0, 1.0, 0.0, 1.0)));
+        font.drawStringAsShapes(l, 0, 0);
+        ofPopMatrix();
+        line++;
+    }
+    
     ofPopMatrix();
 
     ofPopMatrix();
@@ -388,9 +487,7 @@ void ofApp::keyPressed(int key){
 
 //--------------------------------------------------------------
 void ofApp::keyReleased(int key){
-    if(key == 's'){
-        saveToQlab = true;
-    }
+
 }
 
 //--------------------------------------------------------------

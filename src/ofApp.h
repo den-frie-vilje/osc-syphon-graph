@@ -26,12 +26,15 @@ public:
     void dragEvent(ofDragInfo dragInfo);
     void gotMessage(ofMessage msg);
     
-    void drawStringAtSize(string str, ofTrueTypeFont &font, float size, float x, float y, int hAlign = 0, int vAlign = 0);
+    void drawStringAtSize(string str, ofTrueTypeFont &font, float size, float x, float y, float hAlign = 0.0, float vAlign = 0.0);
     
     ofFbo graphFbo;
     ofxSyphonServer grahpSyphonServer;
     
     ofxOscParameterSync oscSync;
+
+    ofParameterGroup guiParameters;
+    ofParameter<bool> guiSaveToQlab;
     
     ofParameterGroup graphParameters;
     ofParameter<float> graphFade;
@@ -52,6 +55,16 @@ public:
     ofParameter<float> graphTitleSize;
     ofParameter<string> graphTitleText;
     ofParameter<float> graphTitleFade;
+    ofParameter<glm::vec2> graphTitlePosition;
+
+    // leader
+
+    ofParameterGroup graphLeader;
+    ofParameter<ofFloatColor> graphLeaderColor;
+    ofParameter<float> graphLeaderSize;
+    ofParameter<string> graphLeaderText;
+    ofParameter<float> graphLeaderFade;
+    ofParameter<glm::vec2> graphLeaderPosition;
 
     // labels
     
@@ -106,8 +119,7 @@ public:
     ofTrueTypeFont guiFont;
     ofTrueTypeFont titleFont;
     ofTrueTypeFont labelsFont;
+    ofTrueTypeFont leaderFont;
     ofImage dfvLogo;
     
-    bool saveToQlab = false;
-
 };

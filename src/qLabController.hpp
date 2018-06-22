@@ -18,7 +18,7 @@ public:
     ofxOscSender oscSender;
     ofJson json;
 
-    float TIMEOUT = 10;
+    float TIMEOUT = 4;
     
     qLabController(){};
 
@@ -29,7 +29,6 @@ public:
     
     void update(){
         while(oscReceiver.hasWaitingMessages()) {
-            
             ofxOscMessage msg;
             oscReceiver.getNextMessage(msg);
             cout << "UPDATE" << endl;
@@ -43,13 +42,11 @@ public:
     string newOscCueFromString(string oscString){
         ofxOscMessage mNewOsc;
         mNewOsc.setAddress("/new");
-        mNewOsc.addStringArg("osc");
+        mNewOsc.addStringArg("network");
         oscSender.sendMessage(mNewOsc, false);
         
         float start = ofGetElapsedTimef();
-        while(!oscReceiver.hasWaitingMessages() && (ofGetElapsedTimef()-start < TIMEOUT)){
-            ;
-        }
+        while((!oscReceiver.hasWaitingMessages()) && (ofGetElapsedTimef()-start < TIMEOUT));
         
         while(oscReceiver.hasWaitingMessages()) {
             
@@ -61,7 +58,7 @@ public:
             if(address[0] == "reply" && address[address.size()-1] == "new"){
                 
                 try{
-                    json.parse(msg.getArgAsString(0));
+                    json = ofJson::parse(msg.getArgAsString(0));
                 }catch(std::exception & e){
                     ofLogError("newOscCueFromString") << "Error parsing json from " << msg.getArgAsString(0) << ": " << e.what();
                 }catch(...){
@@ -76,15 +73,22 @@ public:
                     mMessageType.addIntArg(2);
                     oscSender.sendMessage(mMessageType, false);
                     
+                    ofLogVerbose("newOscCueFromString") << mMessageType << " " << newCueID;
+
                     ofxOscMessage mCustomString;
                     mCustomString.setAddress("/cue/selected/customString");
                     mCustomString.addStringArg(oscString);
                     oscSender.sendMessage(mCustomString, false);
 
+                    ofLogVerbose("newOscCueFromString") << mCustomString << " " << newCueID;
+
                     return newCueID;
                 }
             }
         }
+
+        return "";
+        
     };
     
     string newOscCueFromParameter(const ofAbstractParameter& p, float fadeTime = 0){
@@ -114,9 +118,7 @@ public:
         oscSender.sendMessage(mNewDummy, false);
         
         float start = ofGetElapsedTimef();
-        while(!oscReceiver.hasWaitingMessages() && (ofGetElapsedTimef()-start < TIMEOUT)){
-            ;
-        }
+        while((!oscReceiver.hasWaitingMessages()) && (ofGetElapsedTimef()-start < TIMEOUT));
         
         while(oscReceiver.hasWaitingMessages()) {
             ofxOscMessage msg;
@@ -124,12 +126,10 @@ public:
             
             vector<string> address = ofSplitString(msg.getAddress(),"/",true);
             
-            cout << msg;
-            
             if(address[0] == "reply" && address[address.size()-1] == "new"){
                 
                 try{
-                    json.parse(msg.getArgAsString(0));
+                     json = ofJson::parse(msg.getArgAsString(0));
                 }catch(std::exception & e){
                     ofLogError("newGroupWithOscCuesFromParameterGroup") << "Error parsing json from " << msg.getArgAsString(0) << ": " << e.what();
                 }catch(...){
@@ -137,7 +137,7 @@ public:
                 }
                 
                 if(json.find(std::string("data")) != json.end()){
-                    selectionString += json["data"].get<string>() + ",";
+                    selectionString += json["data"].get<std::string>() + ",";
                     dummyID = json["data"].get<string>();
                     ofLogVerbose("newGroupWithOscCuesFromParameterGroup") << selectionString << " " << dummyID;
                 }
@@ -176,7 +176,7 @@ public:
         oscSender.sendMessage(mNewGroup, false);
 
         start = ofGetElapsedTimef();
-        while(!oscReceiver.hasWaitingMessages() && (ofGetElapsedTimef()-start < TIMEOUT));
+        while((!oscReceiver.hasWaitingMessages()) && (ofGetElapsedTimef()-start < TIMEOUT));
         
         while(oscReceiver.hasWaitingMessages()) {
             
@@ -187,7 +187,7 @@ public:
 
             if(address[0] == "reply" && address[address.size()-1] == "new"){
                 try{
-                    json.parse(msg.getArgAsString(0));
+                    json = ofJson::parse(msg.getArgAsString(0));
                 }catch(std::exception & e){
                     ofLogError("newGroupWithOscCuesFromParameterGroup") << "Error parsing json from " << msg.getArgAsString(0) << ": " << e.what();
                 }catch(...){
@@ -195,7 +195,7 @@ public:
                 }
                 
                 if(json.find(std::string("data")) != json.end()){
-                    string newCueID = json["data"].get<string>();
+                    string newCueID = json["data"].get<std::string>();
                     
                     ofxOscMessage mMode;
                     mMode.setAddress("/cue/selected/mode");
@@ -226,6 +226,7 @@ public:
                 }
             }
         }
+        return "";
     }
     
     string findOscAddress(const ofAbstractParameter& p) {
