@@ -1,0 +1,48 @@
+<?xml version="1.0"?>
+<graph>
+	<master>1</master>
+	<background>
+		<width>1920</width>
+		<height>1080</height>
+		<margin>10</margin>
+		<color>0, 0, 0, 1</color>
+		<margins>0.0696238, 0.0748299</margins>
+	</background>
+	<title>
+		<fade>1</fade>
+		<size>100</size>
+		<color>1, 1, 1, 1</color>
+		<text>Untitled</text>
+	</title>
+	<setup>1</setup>
+	<labels>
+		<color>1, 1, 1, 1</color>
+		<size>20</size>
+		<left>
+			<fade>1</fade>
+			<text>Left Label</text>
+		</left>
+		<center>
+			<fade>1</fade>
+			<text>Center Label</text>
+		</center>
+		<right>
+			<fade>1</fade>
+			<text>Right Label</text>
+		</right>
+	</labels>
+	<bars>
+		<color>1, 1, 1, 1</color>
+		<margins>0.0128835, 0.0470637</margins>
+		<stroke>
+			<color>1, 1, 1, 1</color>
+			<width>69.1101</width>
+			<fade>0</fade>
+		</stroke>
+		<baseline>
+			<color>1, 1, 1, 1</color>
+			<width>2</width>
+			<fade>1</fade>
+		</baseline>
+	</bars>
+</graph>
